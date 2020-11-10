@@ -69,7 +69,6 @@ describe('Testing questions for given product', () => {
 						helpfulness,
 						photos,
 					} = answers[answer];
-					// console.log(answer);
 					expect(typeof id).toBe('number');
 					expect(typeof body).toBe('string');
 					expect(Date.parse(date)).not.toBeNaN();
