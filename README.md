@@ -5,6 +5,9 @@
 - run `npm install`
 - include domain name (and port if running locally)
 - test with `npm test`
+  - for products tests `npm run test-products`
+  - for questions and answers tests `npm run test-qa`
+  - for reviews tests `npm run test-reviews`
 
 ## Refactor
 
