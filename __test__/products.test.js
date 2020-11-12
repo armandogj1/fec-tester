@@ -132,6 +132,32 @@ describe('Testing related products for different ids', () => {
 	});
 });
 
+describe('Should paginate product list', () => {
+	const pages = [1, 3, 5];
+	let responses;
+
+	beforeAll(() => {
+		const req = request(api_url);
+
+		const requests = pages.map((page) => {
+			return Promise.resolve(req.get('/products').query(`page=${page}`));
+		});
+
+		return Promise.all(requests).then((res) => (responses = res));
+	});
+
+	it(`should get pages ${pages} for product 1`, (done) => {
+		responses.forEach((res, idx) => {
+			const { status, body } = res;
+			expect(status).toBe(200);
+			// product 12 is missing, affecting proper page count
+			expect(body[0].id >= (pages[idx] - 1) * 5 + 1).toBe(true);
+		});
+
+		done();
+	});
+});
+
 // request maker for iterative tests
 function getProducts(ids, endpoint) {
 	const products = ids.map((id, idx) => {

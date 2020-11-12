@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const api_url = process.env.URL;
 
-describe('Testing reviews list', () => {
+describe('Should get reviews list', () => {
 	const req = request(api_url);
 	let res;
 
@@ -14,8 +14,6 @@ describe('Testing reviews list', () => {
 	});
 
 	it('should get default reviews for product 2', (done) => {
-		// const res = await req.get('/reviews').query('product_id=2');
-
 		const { product, results, count, page } = res.body;
 
 		expect(res.status).toBe(200);
@@ -35,6 +33,127 @@ describe('Testing reviews list', () => {
 			testReview(review);
 		});
 
+		done();
+	});
+});
+
+describe('Should paginate review list', () => {
+	const pages = [1, 3, 5];
+	let responses;
+
+	beforeAll(() => {
+		const req = request(api_url);
+
+		const requests = pages.map((page) => {
+			console.log(page);
+			return Promise.resolve(
+				req.get('/reviews').query('product_id=1').query(`page=${page}`)
+			);
+		});
+
+		return Promise.all(requests).then((res) => (responses = res));
+	});
+
+	it(`should get pages ${pages} for product 1`, (done) => {
+		responses.forEach((res) => {
+			const { status, body } = res;
+			const { product, page, count, results } = body;
+			expect(status).toBe(200);
+			expect(product).toBe('1');
+			// pagination does not seem to work correctly
+			// page increment by five
+		});
+		done();
+	});
+});
+
+describe('Should provide reviews for good products', () => {
+	const goodIds = [1, 50, 200, 1000];
+	const badIds = ['hello', null, 5.55];
+	let responses;
+
+	beforeAll(() => {
+		const req = request(api_url);
+
+		const goodRequests = goodIds.map((prodId) => {
+			return Promise.resolve(req.get('/reviews').query(`product_id=${prodId}`));
+		});
+
+		const badRequests = badIds.map((prodId) => {
+			return Promise.resolve(req.get('/reviews').query(`product_id=${prodId}`));
+		});
+
+		const requests = goodRequests.concat(badRequests);
+
+		return Promise.all(requests).then((results) => (responses = results));
+	});
+
+	it(`should have status 200 for ${goodIds}`, (done) => {
+		const goodResponses = responses.slice(0, goodIds.length);
+
+		goodResponses.forEach((res) => {
+			expect(res.status).toBe(200);
+
+			res.body.results.forEach((review) => testReview(review));
+		});
+
+		done();
+	});
+
+	it(`should have 422 for ${JSON.stringify(badIds)}`, (done) => {
+		const badResponses = responses.slice(goodIds.length);
+
+		badResponses.forEach((res) => {
+			expect(res.status).toBe(422);
+			expect(res.text).toBe('Error: invalid product_id provided');
+		});
+		done();
+	});
+});
+
+describe('Should get metadata for products', () => {
+	const goodIds = [1, 50, 200, 1000];
+	const badIds = ['hello', null, 5.55];
+	let responses;
+
+	beforeAll(() => {
+		const req = request(api_url);
+
+		const goodRequests = goodIds.map((prodId) => {
+			return Promise.resolve(
+				req.get('/reviews/meta').query(`product_id=${prodId}`)
+			);
+		});
+
+		const badRequests = badIds.map((prodId) => {
+			return Promise.resolve(
+				req.get('/reviews/meta').query(`product_id=${prodId}`)
+			);
+		});
+
+		const requests = goodRequests.concat(badRequests);
+
+		return Promise.all(requests).then((results) => (responses = results));
+	});
+
+	it(`should get metadata for ${goodIds}`, (done) => {
+		const goodResponses = responses.slice(0, goodIds.length);
+
+		goodResponses.forEach((res) => {
+			expect(res.status).toBe(200);
+			// console.log(res.body);
+			testMeta(res.body);
+		});
+		done();
+	});
+
+	it(`should get metadata for ${JSON.stringify(badIds)}`, (done) => {
+		const badResponses = responses.slice(goodIds.length);
+
+		badResponses.forEach((res) => {
+			expect(res.status).toBe(422);
+			expect(res.text).toBe('Error: invalid product_id provided');
+		});
 		done();
 	});
 });
@@ -67,5 +186,19 @@ function testReview(review) {
 		expect(typeof photo.id).toBe('number');
 		expect(Number(photo.id)).not.toBeNaN();
 		expect(photo.url).toEqual(expect.stringMatching(/^https?:\/\//));
+	});
+}
+
+function testMeta(meta) {
+	const { product_id, ratings, recommended, characteristics } = meta;
+
+	expect(Number(product_id)).not.toBeNaN();
+	Object.entries(ratings).forEach(([rating, count]) => {
+		expect(Number(rating)).not.toBeNaN();
+		expect(typeof count).toBe('number');
+	});
+	Object.entries(recommended).forEach(([bool, count]) => {
+		expect(bool === '1' || bool === '0').toBe(true);
+		expect(typeof count).toBe('number');
 	});
 }
