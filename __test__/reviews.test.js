@@ -45,7 +45,6 @@ describe('Should paginate review list', () => {
 		const req = request(api_url);
 
 		const requests = pages.map((page) => {
-			console.log(page);
 			return Promise.resolve(
 				req.get('/reviews').query('product_id=1').query(`page=${page}`)
 			);
@@ -157,6 +156,63 @@ describe('Should get metadata for products', () => {
 		done();
 	});
 });
+
+describe('should add a review', () => {
+	let res;
+
+	beforeAll(() => {
+		const req = request(api_url)
+			.get('/reviews')
+			.query('product_id=10')
+			.query('count=100');
+
+		return Promise.resolve(req).then((response) => (res = response));
+	});
+
+	it('should add a review to product 10', async (done) => {
+		const body = {
+			product_id: 10,
+			rating: 5,
+			summary: 'text of the review',
+			body: 'Continued or full text of the review',
+			recommend: true,
+			name: 'armando',
+			email: 'armando@a.com',
+			photos: [],
+			characteristics: { 14: 5, 15: 5 },
+		};
+		const post = await request(api_url).post('/reviews').send(body);
+
+		expect(post.status).toBe(201);
+
+		// check the new review exists in results
+		const newReviews = await request(api_url)
+			.get('/reviews')
+			.query('product_id=10')
+			.query('count=100');
+		const { results } = newReviews.body;
+		expect(results.length === res.body.results.length + 1).toBe(true);
+
+		const expected = {
+			rating: 5,
+			summary: 'text of the review',
+			body: 'Continued or full text of the review',
+			reviewer_name: 'armando',
+			review_id: expect.any(Number),
+			helpfulness: expect.any(Number),
+		};
+		expect(results[results.length - 1]).toEqual(
+			expect.objectContaining(expected)
+		);
+		expect(Date.parse(results[results.length - 1].date)).not.toBeNaN();
+
+		done();
+	});
+});
+
+/********************
+ *** Test Helpers ***
+ *********************/
 
 function testReview(review) {
 	const {

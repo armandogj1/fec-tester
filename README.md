@@ -1,5 +1,7 @@
 # FEC Server Tester
 
+Testing suite for FEC API microservices using Jest and Supertest.
+
 ## Initialize
 
 - run `npm install`
